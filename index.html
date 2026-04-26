@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Misoto Generator — v5.0</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/preview.css">
+</head>
+<body>
+
+<!-- ── Loading Overlay ─────────────────────────── -->
+<div id="loadingOverlay" class="loading-overlay">
+    <div class="loading-box">
+        <div class="loading-spinner"></div>
+        <p class="loading-text">GERANDO ARQUIVO...</p>
+    </div>
+</div>
+
+<!-- ── Notification Container ─────────────────── -->
+<div id="notificationContainer" class="notif-container" role="status" aria-live="polite"></div>
+
+<!-- ── Confirm Modal ───────────────────────────── -->
+<div id="confirmModal" class="modal-overlay">
+    <div class="modal-box">
+        <h3><i class="fas fa-exclamation-triangle" style="color:#ffd600;margin-right:8px;"></i>Confirmar</h3>
+        <p id="confirmMsg">Tem certeza?</p>
+        <div class="modal-actions">
+            <button class="btn btn-ghost" id="confirmCancel">Cancelar</button>
+            <button class="btn btn-outline" id="confirmOk" style="color:#ff4444;border-color:#ff4444;">Confirmar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── Barra flutuante superior (sem cabeçalho fixo) ── -->
+<div class="floating-bar">
+    <div class="floating-brand">
+        <span class="brand-name">Misoto <em>Generator</em></span>
+        <span class="brand-badge">v5.0</span>
+    </div>
+    <div class="floating-actions">
+        <button class="btn btn-ghost" id="undoBtn" title="Desfazer (Ctrl+Z)" disabled>
+            <i class="fas fa-undo"></i>
+        </button>
+        <button class="btn btn-ghost" id="redoBtn" title="Refazer (Ctrl+Y)" disabled>
+            <i class="fas fa-redo"></i>
+        </button>
+        <button class="btn btn-outline" id="resetBtn" title="Restaurar padrões">
+            <i class="fas fa-trash-alt"></i>
+        </button>
+        <button class="btn btn-accent" id="exportBtn">
+            <i class="fas fa-download"></i> Exportar HTML
+        </button>
+    </div>
+</div>
+
+<!-- ── Botão toggle do painel (desktop) ── -->
+<button id="panelToggleBtn" title="Mostrar/ocultar painel"><i class="fas fa-times"></i></button>
+
+<!-- ── Tab bar mobile (preview ↔ painel) ── -->
+<nav id="mobileTabBar">
+    <button class="mobile-tab active" id="tabPreview" data-tab="preview">
+        <i class="fas fa-eye"></i>
+        <span>Preview</span>
+    </button>
+    <button class="mobile-tab" id="tabPanel" data-tab="panel">
+        <i class="fas fa-sliders-h"></i>
+        <span>Editar</span>
+    </button>
+</nav>
+
+<!-- ── Botão toggle do painel (desktop) ── -->
+<button id="panelToggleBtn" title="Mostrar/ocultar painel"><i class="fas fa-times"></i></button>
+
+<!-- ── Tab bar mobile (preview ↔ painel) ── -->
+<nav id="mobileTabBar">
+    <button class="mobile-tab active" id="tabPreview" data-tab="preview">
+        <i class="fas fa-eye"></i>
+        <span>Preview</span>
+    </button>
+    <button class="mobile-tab" id="tabPanel" data-tab="panel">
+        <i class="fas fa-sliders-h"></i>
+        <span>Editar</span>
+    </button>
+</nav>
+
+<!-- ── Preview (100% da tela) ── -->
+<iframe id="previewFrame" sandbox="allow-scripts allow-same-origin allow-modals" title="Pré-visualização ao vivo"></iframe>
+
+<!-- ── Painel de controle flutuante ── -->
+<aside id="controlPanel">
+    <div id="panelHandle">
+        <span class="panel-handle-title"><i class="fas fa-sliders-h"></i> &nbsp;Controles</span>
+        <span class="panel-handle-dots">⠿</span>
+    </div>
+    <div class="panel-body">
+        <!-- ═══════════════ TEMAS ════════════════ -->
+        <section class="panel-section" data-section="themes">
+            <button class="section-header" aria-expanded="false" aria-controls="themesBody">
+                <span><i class="fas fa-star"></i> Temas Prontos</span>
+                <i class="fas fa-chevron-down toggle-icon"></i>
+            </button>
+            <div class="section-body" id="themesBody">
+                <div id="themesGrid"></div>
+                <div class="json-row" style="margin-top:6px;">
+                    <button class="btn btn-ghost" id="exportJsonBtn" style="flex:1;justify-content:center;font-size:.7rem;">
+                        <i class="fas fa-file-export"></i> Exportar Config
+                    </button>
+                    <label class="import-label">
+                        <i class="fas fa-file-import"></i> Importar Config
+                        <input type="file" id="importJsonInput" accept=".json">
+                    </label>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══════════════ CORES ════════════════ -->
+        <section class="panel-section" data-section="colors">
+            <button class="section-header" aria-expanded="false" aria-controls="colorsBody">
+                <span><i class="fas fa-palette"></i> Cores</span>
+                <i class="fas fa-chevron-down toggle-icon"></i>
+            </button>
+            <div class="section-body" id="colorsBody">
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label>Cor Primária</label>
+                        <div class="color-row">
+                            <input type="color" id="primaryColor" value="#00ff00" class="color-swatch">
+                            <input type="text" id="primaryColorHex" value="#00ff00" class="form-input hex-input" maxlength="7">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Cor Secundária</label>
+                        <div class="color-row">
+                            <input type="color" id="secondaryColor" value="#9d00ff" class="color-swatch">
+                            <input type="text" id="secondaryColorHex" value="#9d00ff" class="form-input hex-input" maxlength="7">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Fundo da Página</label>
+                        <div class="color-row">
+                            <input type="color" id="bgColor" value="#0a0a0f" class="color-swatch">
+                            <input type="text" id="bgColorHex" value="#0a0a0f" class="form-input hex-input" maxlength="7">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Fundo do Card</label>
+                        <div class="color-row">
+                            <input type="color" id="cardColor" value="#0a0a0f" class="color-swatch">
+                            <input type="text" id="cardColorHex" value="#0a0a0f" class="form-input hex-input" maxlength="7">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Texto</label>
+                        <div class="color-row">
+                            <input type="color" id="textColor" value="#e0e0ff" class="color-swatch">
+                            <input type="text" id="textColorHex" value="#e0e0ff" class="form-input hex-input" maxlength="7">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══════════════ TIPOGRAFIA ═══════════ -->
+        <section class="panel-section" data-section="typography">
+            <button class="section-header" aria-expanded="false" aria-controls="typographyBody">
+                <span><i class="fas fa-font"></i> Tipografia</span>
+                <i class="fas fa-chevron-down toggle-icon"></i>
+            </button>
+            <div class="section-body" id="typographyBody">
+                <div class="form-group">
+                    <label>Fonte Base</label>
+                    <select class="form-input form-input--font font-native-select" id="fontFamily" data-font-picker="true">
+                        <optgroup label="Monospace">
+                            <option value="'Courier New', monospace" selected>Courier New</option>
+                            <option value="'Consolas', monospace">Consolas</option>
+                            <option value="'Monaco', monospace">Monaco</option>
+                            <option value="'Lucida Console', monospace">Lucida Console</option>
+                        </optgroup>
+                        <optgroup label="Sans-Serif">
+                            <option value="'Segoe UI', sans-serif">Segoe UI</option>
+                            <option value="'Arial', sans-serif">Arial</option>
+                            <option value="'Verdana', sans-serif">Verdana</option>
+                            <option value="'Impact', sans-serif">Impact</option>
+                            <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
+                        </optgroup>
+                        <optgroup label="Serif">
+                            <option value="'Georgia', serif">Georgia</option>
+                            <option value="'Garamond', serif">Garamond</option>
+                            <option value="'Times New Roman', serif">Times New Roman</option>
+                        </optgroup>
+                        <optgroup label="Fonte Personalizada" id="customFontGroup" style="display:none;">
+                            <option value="'CustomFont'" id="customFontOption">Fonte carregada</option>
+                        </optgroup>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Fonte do Nome</label>
+                    <select class="form-input form-input--font font-native-select" id="fontFamilyName" data-font-picker="true" data-allow-inherit="true"></select>
+                </div>
+                <div class="form-group">
+                    <label>Fonte do Título do Link</label>
+                    <select class="form-input form-input--font font-native-select" id="fontFamilyLinkName" data-font-picker="true" data-allow-inherit="true"></select>
+                </div>
+                <div class="form-group">
+                    <label>Fonte da Descrição do Link</label>
+                    <select class="form-input form-input--font font-native-select" id="fontFamilyLinkDesc" data-font-picker="true" data-allow-inherit="true"></select>
+                </div>
+                <div class="form-group">
+                    <label>Fonte do Cabeçalho do Card</label>
+                    <select class="form-input form-input--font font-native-select" id="fontFamilyCardTitle" data-font-picker="true" data-allow-inherit="true"></select>
+                </div>
+                <div class="form-group">
+                    <label>Fonte do Rodapé</label>
+                    <select class="form-input form-input--font font-native-select" id="fontFamilyFooter" data-font-picker="true" data-allow-inherit="true"></select>
+                </div>
+                <div class="form-group">
+                    <label>Upload de Fonte Própria</label>
+                    <div class="upload-zone" id="fontUploadZone" data-target="fontFile">
+                        <i class="fas fa-font"></i>
+                        <p>Clique ou arraste aqui</p>
+                        <span class="upload-hint">TTF, OTF, WOFF, WOFF2 · Máx 5MB</span>
+                        <input type="file" accept=".ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2" id="fontFile" class="upload-input">
+                    </div>
+                    <div class="upload-preview hidden" id="fontPreviewBox" style="padding:8px;background:rgba(0,0,0,.2);border-radius:6px;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-font" style="color:#9d00ff;"></i>
+                        <span id="fontFileName" style="font-size:.8rem;flex:1;"></span>
+                        <button class="remove-btn" id="removeFont"><i class="fas fa-times"></i></button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Tamanho do Nome</label>
+                    <div class="range-row">
+                        <input type="range" class="form-range" id="nameSize" min="1" max="4" step="0.1" value="2.4">
+                        <span class="range-val" id="nameSizeValue">2.4rem</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══════════════ PERFIL ════════════════ -->
+        <section class="panel-section" data-section="profile">
+            <button class="section-header" aria-expanded="false" aria-controls="profileBody">
+                <span><i class="fas fa-user-circle"></i> Perfil</span>
+                <i class="fas fa-chevron-down toggle-icon"></i>
+            </button>
+            <div class="section-body" id="profileBody">
+                <div class="form-group">
+                    <label>Nome de Exibição</label>
+                    <input type="text" class="form-input" id="username" value="MISOTO" maxlength="20" placeholder="SEU NOME">
+                </div>
+                <div class="form-group">
+                    <label>Bio / Descrição</label>
+                    <textarea class="form-textarea" id="bioText" maxlength="160" placeholder="Uma breve descrição sobre você..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Foto de Perfil</label>
+                    <div class="upload-zone" id="profileUploadZone" data-target="profileFile">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <p>Clique ou arraste aqui</p>
+                        <span class="upload-hint">JPG, PNG, GIF · Máx 5MB</span>
+                        <input type="file" accept="image/jpeg,image/png,image/gif" id="profileFile" class="upload-input">
+                    </div>
+                    <div class="upload-preview hidden" id="profilePreviewBox">
+                        <img id="profilePreviewImg" alt="">
+                        <button class="remove-btn" id="removeProfile"><i class="fas fa-times"></i></button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Formato do Avatar</label>
+                    <select class="form-input" id="avatarShape">
+                        <option value="circle">Círculo</option>
+                        <option value="square">Quadrado</option>
+                        <option value="rounded">Arredondado</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Borda do Avatar</label>
+                    <select class="form-input" id="avatarBorderStyle">
+                        <option value="neon">Neon</option>
+                        <option value="solid">Sólida</option>
+                        <option value="double">Dupla</option>
+                        <option value="dashed">Tracejada</option>
+                        <option value="gradient">Gradiente</option>
+                        <option value="none">Nenhuma</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Efeito do Avatar</label>
+                    <select class="form-input" id="avatarEffect">
+                        <option value="aura">Aura</option>
+                        <option value="ring">Anel</option>
+                        <option value="pulse">Pulso</option>
+                        <option value="glow">Brilho</option>
+                        <option value="none">Nenhum</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Tamanho do Avatar</label>
+                    <div class="range-row">
+                        <input type="range" class="form-range" id="avatarSize" min="60" max="220" step="5" value="130">
+                        <span class="range-val" id="avatarSizeValue">130px</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══════════════ WALLPAPER DO CARD ════════════════ -->
+        <section class="panel-section" data-section="wallpaper">
+            <button class="section-header" aria-expanded="false" aria-controls="wallpaperBody">
+                <span><i class="fas fa-image"></i> Wallpaper do Card</span>
+                <i class="fas fa-chevron-down toggle-icon"></i>
+            </button>
+            <div class="section-body" id="wallpaperBody">
+                <div class="form-group">
+                    <label>Imagem de Fundo do Card</label>
+                    <div class="upload-zone" id="wallpaperUploadZone" data-target="wallpaperFile">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <p>Clique ou arraste aqui</p>
+                        <span class="upload-hint">JPG, PNG, GIF · Máx 10MB</span>
+                        <input type="file" accept="image/jpeg,image/png,image/gif" id="wallpaperFile" class="upload-input">
+                    </div>
+                    <div class="upload-preview hidden" id="wallpaperPreviewBox">
+                        <img id="wallpaperPreviewImg" alt="">
+                        <button class="remove-btn" id="removeWallpaper"><i class="fas fa-times"></i></button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Opacidade do Wallpaper</label>
+                    <div class="range-row">
+                        <input type="range" class="form-range" id="wallpaperOpacity" min="0" max="1" step="0.05" value="0.35">
+                        <span class="range-val" id="wallpaperOpacityValue">0.35</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Desfoque (Blur)</label>
+                    <div class="range-row">
+                        <input type="range" class="form-range" id="wallpaperBlur" min="0" max="30" step="1" value="0">
+                        <span class="range-val" id="wallpaperBlurValue">0px</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Filtro de Cor</label>
+                    <select class="form-input" id="wallpaperFilter">
+                        <option value="none">Nenhum</option>
+                        <option value="custom">Filtro Personalizado</option>
+                        <option value="hueRotate">Neon / Roxo</option>
+                        <option value="desaturate">Preto e Branco</option>
+                        <option value="warm">Quente</option>
+                        <option value="cool">Frio</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Cor do Filtro Personalizado</label>
+                    <div class="color-row">
+                        <input type="color" id="wallpaperFilterColor" value="#9d00ff" class="color-swatch">
+                        <input type="text" id="wallpaperFilterColorHex" value="#9d00ff" class="form-input hex-input" maxlength="7">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Intensidade do Filtro</label>
+                    <div class="range-row">
+                        <input type="range" class="form-range" id="wallpaperFilterStrength" min="0" max="1" step="0.05" value="0">
+                        <span class="range-val" id="wallpaperFilterStrengthValue">0</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══════════════ WALLPAPER DO FUNDO ══ -->
+        <section class="panel-section" data-section="bgwallpaper">
+            <button class="section-header" aria-expanded="false" aria-controls="bgWallpaperBody">
+                <span><i class="fas fa-globe"></i> Wallpaper do Fundo</span>
+                <i class="fas fa-chevron-down toggle-icon"></i>
+            </button>
+            <div class="section-body" id="bgWallpaperBody">
+                <div class="form-group">
+                    <label>Imagem de Fundo da Página</label>
+                    <div class="upload-zone" id="bgWallpaperUploadZone" data-target="bgWallpaperFile">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <p>Clique ou arraste aqui</p>
+                        <span class="upload-hint">JPG, PNG, GIF · Máx 10MB</span>
+                        <input type="file" accept="image/jpeg,image/png,image/gif" id="bgWallpaperFile" class="upload-input">
+                    </div>
+                    <div class="upload-preview hidden" id="bgWallpaperPreviewBox">
+                        <img id="bgWallpaperPreviewImg" alt="">
+                        <button class="remove-btn" id="removeBgWallpaper"><i class="fas fa-times"></i></button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Opacidade</label>
+                    <div class="range-row">
+                        <input type="range" class="form-range" id="bgWallpaperOpacity" min="0" max="1" step="0.05" value="0.4">
+                        <span class="range-val" id="bgWallpaperOpacityValue">0.4</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Desfoque (Blur)</label>
+                    <div class="range-row">
+                        <input type="range" class="form-range" id="bgWallpaperBlur" min="0" max="30" step="1" value="0">
+                        <span class="range-val" id="bgWallpaperBlurValue">0px</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Modo de Ajuste</label>
+                    <select class="form-input" id="bgWallpaperSize">
+                        <option value="cover">Cobrir tela (cover)</option>
+                        <option value="contain">Conter (contain)</option>
+                        <option value="100% 100%">Esticar</option>
+                    </select>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══════════════ CARD / LAYOUT ════════════ -->
+        <section class="panel-section" data-section="layout">
+            <button class="section-header" aria-expanded="false" aria-controls="layoutBody">
+                <span><i class="fas fa-th-large"></i> Card e Layout</span>
+                <i class="fas fa-chevron-down toggle-icon"></i>
+            </button>
+            <div class="section-body" id="layoutBody">
+                <div class="form-group">
+                    <label>Largura</label>
+                    <div class="range-row">
+                        <input type="range" class="form-range" id="cardWidth" min="280" max="900" step="10" value="490">
+                        <span class="range-val" id="cardWidthValue">490px</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Altura</label>
+                    <div class="range-row">
+                        <input type="range" class="form-range" id="cardMinHeight" min="0" max="900" step="10" value="0">
+                        <span class="range-val" id="cardMinHeightValue">Automático</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Opacidade do Card</label>
+                    <div class="range-row">
+                        <input type="range" class="form-range" id="cardOpacity" min="0.1" max="1" step="0.05" value="0.88">
+                        <span class="range-val" id="cardOpacityValue">0.88</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Título do Card</label>
+                    <input type="text" class="form-input" id="cardHeaderText" value="SISTEMA::LINKS" maxlength="30">
+                </div>
+                <div class="form-group">
+                    <label>Texto do Rodapé</label>
+                    <input type="text" class="form-input" id="footerText" placeholder="v5.0" maxlength="30">
+                </div>
+                <label class="toggle-row">
+                    <input type="checkbox" id="showCardHeader" checked>
+                    <div class="toggle-info"><span class="toggle-name">Cabeçalho do Card</span></div>
+                    <div class="toggle-switch"></div>
+                </label>
+                <label class="toggle-row">
+                    <input type="checkbox" id="showBio" checked>
+                    <div class="toggle-info"><span class="toggle-name">Seção Bio</span></div>
+                    <div class="toggle-switch"></div>
+                </label>
+                <label class="toggle-row">
+                    <input type="checkbox" id="showClock" checked>
+                    <div class="toggle-info"><span class="toggle-name">Relógio</span></div>
+                    <div class="toggle-switch"></div>
+                </label>
+                <label class="toggle-row">
+                    <input type="checkbox" id="showFooter" checked>
+                    <div class="toggle-info"><span class="toggle-name">Rodapé</span></div>
+                    <div class="toggle-switch"></div>
+                </label>
+            </div>
+        </section>
+
+        <!-- ═══════════════ LINKS ══════════════════ -->
+        <section class="panel-section" data-section="links">
+            <button class="section-header" aria-expanded="false" aria-controls="linksBody">
+                <span><i class="fas fa-link"></i> Links</span>
+                <i class="fas fa-chevron-down toggle-icon"></i>
+            </button>
+            <div class="section-body" id="linksBody">
+                <div class="form-group">
+                    <label>Layout dos Links</label>
+                    <select class="form-input" id="linksLayout">
+                        <option value="list">Lista vertical</option>
+                        <option value="grid">Grade (2 colunas)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Estilo dos Botões</label>
+                    <select class="form-input" id="linkStyle">
+                        <option value="default">Padrão</option>
+                        <option value="pill">Pílula</option>
+                        <option value="outlined">Contorno</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Animação de Entrada</label>
+                    <select class="form-input" id="linkAnimation">
+                        <option value="slideLeft">Deslizar da esquerda</option>
+                        <option value="fade">Desaparecer</option>
+                        <option value="bounce">Quicar</option>
+                        <option value="scale">Escalar</option>
+                        <option value="none">Nenhuma</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Efeito ao Passar o Mouse</label>
+                    <select class="form-input" id="hoverEffect">
+                        <option value="slide">Deslizar</option>
+                        <option value="glow">Brilho</option>
+                        <option value="scale">Escalar</option>
+                        <option value="none">Nenhum</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Espaçamento</label>
+                    <div class="range-row">
+                        <input type="range" class="form-range" id="linkSpacing" min="0" max="30" step="1" value="10">
+                        <span class="range-val" id="linkSpacingValue">10px</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Arredondamento</label>
+                    <div class="range-row">
+                        <input type="range" class="form-range" id="linkRadius" min="0" max="30" step="1" value="10">
+                        <span class="range-val" id="linkRadiusValue">10px</span>
+                    </div>
+                </div>
+                <hr style="border-color:rgba(157,0,255,.15);margin:4px 0;">
+                <div class="links-list" id="linksList"></div>
+                <button class="add-link-btn" id="addLinkBtn">
+                    <i class="fas fa-plus"></i> Adicionar Link
+                </button>
+            </div>
+        </section>
+
+        <!-- ═══════════════ MÚSICA ════════════════ -->
+        <section class="panel-section" data-section="music">
+            <button class="section-header" aria-expanded="false" aria-controls="musicBody">
+                <span><i class="fas fa-music"></i> Música Ambiente</span>
+                <i class="fas fa-chevron-down toggle-icon"></i>
+            </button>
+            <div class="section-body" id="musicBody">
+                <div class="form-group">
+                    <label>Arquivo MP3</label>
+                    <div class="upload-zone" id="musicUploadZone" data-target="musicFile">
+                        <i class="fas fa-music"></i>
+                        <p>Clique ou arraste aqui</p>
+                        <span class="upload-hint">MP3 · Máx 15MB</span>
+                        <input type="file" accept="audio/mpeg" id="musicFile" class="upload-input">
+                    </div>
+                    <div class="music-loaded hidden" id="musicLoadedBox">
+                        <div class="music-file-row">
+                            <i class="fas fa-music"></i>
+                            <span id="musicFileName" class="music-file-name">—</span>
+                            <button class="remove-btn-sm" id="removeMusic"><i class="fas fa-times"></i></button>
+                        </div>
+                        <div class="music-player" id="musicPlayer">
+                            <button class="play-btn" id="playBtn"><i class="fas fa-play"></i></button>
+                            <div class="player-time">
+                                <span id="currentTime">0:00</span>
+                                <span class="sep">/</span>
+                                <span id="totalTime">0:00</span>
+                            </div>
+                            <div class="player-progress-wrap">
+                                <input type="range" class="player-progress form-range" id="musicProgress" min="0" max="100" step="0.1" value="0">
+                            </div>
+                            <div class="player-vol-wrap">
+                                <button class="vol-btn" id="volBtn"><i class="fas fa-volume-up"></i></button>
+                                <input type="range" class="vol-slider form-range" id="volSlider" min="0" max="100" value="70">
+                            </div>
+                        </div>
+                        <canvas id="waveCanvas" width="300" height="40" style="width:100%;height:40px;border-radius:6px;background:rgba(0,0,0,.2);"></canvas>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Estilo da Visualização</label>
+                    <select class="form-input" id="waveformStyle">
+                        <option value="bars">Barras</option>
+                        <option value="wave">Onda</option>
+                        <option value="dots">Pontos</option>
+                        <option value="circles">Círculos</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Rótulo do Player</label>
+                    <input type="text" class="form-input" id="audioStreamLabel" value="AUDIO_STREAM" maxlength="24" placeholder="AUDIO_STREAM">
+                </div>
+                <label class="toggle-row">
+                    <input type="checkbox" id="musicLoop" checked>
+                    <div class="toggle-info"><span class="toggle-name">Repetir música</span></div>
+                    <div class="toggle-switch"></div>
+                </label>
+            </div>
+        </section>
+
+        <!-- ═══════════════ IMAGENS FLUTUANTES ═══ -->
+        <section class="panel-section" data-section="floating">
+            <button class="section-header" aria-expanded="false" aria-controls="floatingBody">
+                <span><i class="fas fa-images"></i> Imagens Flutuantes</span>
+                <i class="fas fa-chevron-down toggle-icon"></i>
+            </button>
+            <div class="section-body" id="floatingBody">
+                <div class="upload-zone" id="floatUploadZone" data-target="floatFile">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>Clique ou arraste aqui</p>
+                    <span class="upload-hint">PNG, JPG, GIF, WEBP · Máx 5MB</span>
+                    <input type="file" accept="image/*" id="floatFile" class="upload-input">
+                </div>
+                <div class="float-list" id="floatList"></div>
+            </div>
+        </section>
+
+        <!-- ═══════════════ EFEITOS VISUAIS ══════ -->
+        <section class="panel-section" data-section="effects">
+            <button class="section-header" aria-expanded="false" aria-controls="effectsBody">
+                <span><i class="fas fa-magic"></i> Efeitos Visuais</span>
+                <i class="fas fa-chevron-down toggle-icon"></i>
+            </button>
+            <div class="section-body" id="effectsBody">
+                <label class="toggle-row">
+                    <input type="checkbox" id="scanlinesEffect" checked>
+                    <div class="toggle-info"><span class="toggle-name">Linhas de Varredura (CRT)</span><span class="toggle-desc">Linhas estilo monitor antigo</span></div>
+                    <div class="toggle-switch"></div>
+                </label>
+                <label class="toggle-row">
+                    <input type="checkbox" id="auraEffect" checked>
+                    <div class="toggle-info"><span class="toggle-name">Efeito no Avatar</span><span class="toggle-desc">Brilho / aura / anel</span></div>
+                    <div class="toggle-switch"></div>
+                </label>
+                <label class="toggle-row">
+                    <input type="checkbox" id="glitchEffect" checked>
+                    <div class="toggle-info"><span class="toggle-name">Falha (Glitch)</span><span class="toggle-desc">Distorção ocasional</span></div>
+                    <div class="toggle-switch"></div>
+                </label>
+                <label class="toggle-row">
+                    <input type="checkbox" id="borderGlow" checked>
+                    <div class="toggle-info"><span class="toggle-name">Brilho Neon nas Bordas</span><span class="toggle-desc">Neon no card</span></div>
+                    <div class="toggle-switch"></div>
+                </label>
+                <label class="toggle-row">
+                    <input type="checkbox" id="typingEffect" checked>
+                    <div class="toggle-info"><span class="toggle-name">Efeito de Digitação</span><span class="toggle-desc">Texto dos links como máquina de escrever</span></div>
+                    <div class="toggle-switch"></div>
+                </label>
+                <label class="toggle-row">
+                    <input type="checkbox" id="matrixEffect">
+                    <div class="toggle-info"><span class="toggle-name">Chuva Matrix</span><span class="toggle-desc">Caracteres caindo no fundo</span></div>
+                    <div class="toggle-switch"></div>
+                </label>
+                <div class="form-group" style="margin-top:4px;">
+                    <label>Cor da Chuva Matrix</label>
+                    <input type="color" id="matrixColor" value="#00ff00" class="color-swatch" style="width:100%;height:32px;">
+                </div>
+                <label class="toggle-row">
+                    <input type="checkbox" id="particlesEffect">
+                    <div class="toggle-info"><span class="toggle-name">Partículas Flutuantes</span><span class="toggle-desc">Partículas animadas no fundo</span></div>
+                    <div class="toggle-switch"></div>
+                </label>
+                <div class="form-group" style="margin-top:4px;">
+                    <label>Cor das Partículas</label>
+                    <input type="color" id="particleColor" value="#9d00ff" class="color-swatch" style="width:100%;height:32px;">
+                </div>
+
+                <hr style="border-color:rgba(157,0,255,.15);margin:8px 0;">
+
+                <label class="toggle-row">
+                    <input type="checkbox" id="sonicWaveEffect">
+                    <div class="toggle-info"><span class="toggle-name">Onda Sônica</span><span class="toggle-desc">Onda ao clicar nos links</span></div>
+                    <div class="toggle-switch"></div>
+                </label>
+
+                <div class="form-group" style="margin-top:8px;">
+                    <label>Rastro do Mouse</label>
+                    <select class="form-input" id="mouseTrail">
+                        <option value="none">Desativado</option>
+                        <option value="particles">Partículas</option>
+                        <option value="flame">Chamas</option>
+                        <option value="neon">Luz Neon</option>
+                        <option value="stars">Estrelas</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Cor do Rastro</label>
+                    <input type="color" id="mouseTrailColor" value="#9d00ff" class="color-swatch" style="width:100%;height:32px;">
+                </div>
+            </div>
+        </section>
+
+    </div>
+</aside>
+
+<!-- ── Áudio ── -->
+<audio id="globalAudio" loop></audio>
+
+<!-- ── Scripts ── -->
+<script src="js/state.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/font-manager.js"></script>
+<script src="js/links.js"></script>
+<script src="js/floating.js"></script>
+<script src="js/player.js"></script>
+<script src="js/themes.js"></script>
+<script src="js/render-utils.js"></script>
+<script src="js/preview.js"></script>
+<script src="js/export.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>
